@@ -1,9 +1,9 @@
 # soc-honeypot-deployment
-***
+
 Internal honeypot lab: Cowrie, Dionaea, Glastopf trong VLAN phục vụ SOC detection &amp; training.
 
 ## Goal
-***
+
 The goal of this lab is to configure and deploy a Honeypot (Decoy) and to capture the packets that attackers send to the Decoy; log the Honeypot and forward the logs to the Elastic SIEM.
 ## Architect of this lab
 
