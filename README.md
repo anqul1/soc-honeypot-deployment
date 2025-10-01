@@ -13,3 +13,4 @@ The goal of this lab is to configure and deploy a Honeypot (Decoy) and to captur
 [Honeypot VLAN: 10.10.10.0/24]
 - Honeypot VM (10.10.50.10): Cowrie (SSH/Telnet); Dionaea (malware services); Glastopf (Web)
 ```
+<img width="845" height="305" alt="image" src="https://github.com/user-attachments/assets/57fd26d9-96ce-4d13-b2bc-850158791770" />
