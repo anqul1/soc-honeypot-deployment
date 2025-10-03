@@ -16,17 +16,17 @@ The goal of this lab is to configure and deploy a Honeypot (Decoy) and to captur
 - Ubuntu 22.04 live-server on VMWare
 [Attacker's Compromised computer on VMWare (Linux): 10.10.50.20/24]
 [Router: connect 2 computers from different VLANs]
-- Forwarding logs to SIEM in different VLAN
-- 
+- Forwarding Honeypot logs to SIEM in different VLAN
+- Using Alpine Linux (light distro) because I'm using my 4 years old laptop =))
 ```
 ## Step 1: Configure the network
 ### Honeypot VM (10.10.50.10)
 First, you need to install Ubuntu 22.04 live-server, and add 2 NIC into this VM: 
-- NIC 1: 10.10.50.10/24 (This one is for stimulate your Honeypot in a VLAN) 
-- NIC 2: NAT (And this one help you to connect with the internet to install things for your machine)
+- NIC 1: 10.10.50.10/24 (This one is for stimulate your Honeypot in a VLAN) (in my lab it's vmnet3)
+- NIC 2: NAT (And this one help you to connect with the internet to install things for your machine) 
 You can go to VM > Settings > Add > Network Adapter > Choose NAT
 
-<img width="889" height="900" alt="image" src="https://github.com/user-attachments/assets/fc475c64-8947-4ac7-9328-149a138ad101" />
+<img width="371" height="354" alt="image" src="https://github.com/user-attachments/assets/6b34a7a0-21ba-4a30-8fba-a813a9d68926" />
 
 The NIC1 it's my vmnet3, and i configure it like this:
 
@@ -40,6 +40,50 @@ For me, my NIC1 is corresponding to ens33, NIC2 is corresponding to ens37, chang
 <img width="636" height="163" alt="image" src="https://github.com/user-attachments/assets/b4d33dd2-570e-46af-ae51-e151e00e0d07" />
 
 Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up the NIC1 when I install the OS and add the NIC2 after that), and next you need to run `sudo netplan apply` 
+
+### Router-layer3 
+#### Install OS
+- Now we need to install a very light distro of linux - Alpine. Link to the distro: `https://www.alpinelinux.org/downloads/` then download the standard version (the x86_64 for my vmware)
+- Go to create a new virtual machine -> Choose your ISO File -> VMWare cannot detect the OS so you need to choose `Other Linux 5.x kernel 64-bit`
+
+<img width="503" height="524" alt="image" src="https://github.com/user-attachments/assets/18cb7f04-2e55-4c7a-88fe-9a2998cb2e32" />
+
+#### Config for routing
+
+- Add 2 NICs to your VM: 
+  - VMnet3 (10.10.50.0/24)
+  - VMnet4 (10.10.10.0/24)
+  
+<img width="372" height="325" alt="image" src="https://github.com/user-attachments/assets/1d8040a4-78e8-43d6-900f-b38fdaa5035d" />
+
+- Check if 2 NICs detected, run command: `ip a`
+<img width="826" height="210" alt="image" src="https://github.com/user-attachments/assets/6121664a-0cc3-4825-b966-7771ed53f39a" />
+
+- As you can see here now we have `eth0` and `eth1`, let's assign IP for each NIC:
+
+```bash
+#vmnet3 (route to honeypot)
+ip addr add 10.10.50.1/24 dev eth0
+ip link set eth0 up
+#vmnet4 (route to Admin + siem)
+ip addr add 10.10.10.1/24 dev eth1
+ip link set eth1 up
+```
+- The result:
+<img width="767" height="352" alt="image" src="https://github.com/user-attachments/assets/1665c011-faaa-4ce3-ac88-79ac6752ea95" />
+
+- Next, we need to turn on IP Forwarding (Allow it to routing on the routing table):
+  - Run `vi /etc/sysctl.conf`
+  - Add this line: `net.ipv4.ip_forward=1`
+  - Then run: `sysctl -p` to apply new config.
+  - <img width="463" height="163" alt="image" src="https://github.com/user-attachments/assets/b98c419f-9911-4946-9ad6-56ec6164d2fd" />
+
+- Let's test it from your Honeypot VM, let's ping to Admin at `10.10.10.20` (My real PC):
+  - `ping 10.10.10.20`
+  - <img width="611" height="185" alt="image" src="https://github.com/user-attachments/assets/4f915dbb-beec-4d1b-922d-2f0138cbc5e7" />
+  
+  - As you can see, now i can ping between different interfaces (stimulate my VLAN)
+
 We're done the first job!
 
 ## Step 2: Setup the firewall
