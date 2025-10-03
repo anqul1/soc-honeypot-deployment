@@ -4,14 +4,20 @@ Internal honeypot lab: Cowrie, Dionaea, Glastopf trong VLAN phục vụ SOC dete
 
 ## Goal
 
-The goal of this lab is to configure and deploy a Honeypot (Decoy) and to capture the packets that attackers send to the Decoy; log the Honeypot and forward the logs to the Elastic SIEM.
+The goal of this lab is to configure and deploy a Honeypot (Decoy) and to capture the packets that attackers send to the Decoy; log the Honeypot and forward the logs to the Elastic SIEM. We will use 3 Honeypots to have some "depth" logs in each attack vector to analysis (for SOC value - commands, samples, payloads, forensics. you’ll need specialized honeypots)
 ## Architect of this lab
 
 ```java
 [Manage VLAN: 10.10.10.0/24]
-- Admin + SIEM (10.10.10.20)
-[Honeypot VLAN: 10.10.10.0/24]
-- Honeypot VM (10.10.50.10): Cowrie (SSH/Telnet); Dionaea (malware services); Glastopf (Web)
+- Admin + SIEM (10.10.10.20/24)
+- My Real PC ;)
+[Honeypot VLAN: 10.10.50.0/24]
+- Honeypot VM (10.10.50.10/24): Cowrie (SSH/Telnet); Dionaea (malware services); Glastopf (Web)
+- Ubuntu 22.04 live-server on VMWare
+[Attacker's Compromised computer on VMWare (Linux): 10.10.50.20/24]
+[Router: connect 2 computers from different VLANs]
+- Forwarding logs to SIEM in different VLAN
+- 
 ```
 ## Step 1: Configure the network
 ### Honeypot VM (10.10.50.10)
@@ -26,9 +32,46 @@ The NIC1 it's my vmnet3, and i configure it like this:
 
 <img width="694" height="653" alt="image" src="https://github.com/user-attachments/assets/0f2260fe-1e02-4d18-850b-6cc08e7939a8" />
 
-Inside the VM, go to the directory `/etc/netplan/`, find and change the config in yaml
+Inside the VM, go to the directory `/etc/netplan/`, find and change your config in yaml
 ```
-cd /etc/netplan/
+sudo nano /etc/netplan/00-installer-config.yaml
 ```
-<img width="795" height="593" alt="image" src="https://github.com/user-attachments/assets/b80e7942-b8ff-4041-861d-54e6409b1ff3" />
+For me, my NIC1 is corresponding to ens33, NIC2 is corresponding to ens37, change the config like following:
+<img width="636" height="163" alt="image" src="https://github.com/user-attachments/assets/b4d33dd2-570e-46af-ae51-e151e00e0d07" />
+
+Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up the NIC1 when I install the OS and add the NIC2 after that), and next you need to run `sudo netplan apply` 
+We're done the first job!
+
+## Step 2: Setup the firewall
+### Honeypot VM (10.10.50.10)
+```bash
+# Reset all rule -> default rule
+sudo ufw reset
+# It's a honeypot so we need to set the rule to deny-by-default
+sudo ufw default deny incoming
+sudo ufw default deny outgoing
+# Allow incoming from attacker in VLAN to honeypot ports + ICMP
+sudo ufw allow from 10.10.50.0/24 to any port 2222 proto tcp   # Cowrie (SSH fake)
+sudo ufw allow from 10.10.50.0/24 to any port 8080 proto tcp   # Glastopf (HTTP)
+sudo ufw allow from 10.10.50.0/24 to any port 1445 proto tcp   # Dionaea mapped SMB
+sudo ufw allow from 10.10.50.0/24 to any proto icmp # allow ICMP (ping) from VLAN of the Honeypot (where the attacker located)
+# Allow incoming from Management (Admin/SIEM)
+sudo ufw allow from 10.10.10.20 to any port 22 proto tcp     # Admin SSH
+sudo ufw allow out to 10.10.10.20 port 5044 proto tcp   # Filebeat -> Logstash/Logstash-beats
+sudo ufw allow out to 10.10.10.20 port 514 proto udp    # Syslog
+# On the NIC2 (ens37 - the NAT NIC)
+# DNS (UDP/TCP) on NAT interface so name resolution works
+sudo ufw allow out on ens37 to any port 53 proto udp
+sudo ufw allow out on ens37 to any port 53 proto tcp
+# DHCP client 
+sudo ufw allow out on ens37 to any port 67 proto udp
+# TEMPORARY: allow HTTP/HTTPS on NAT for apt/docker pull 
+sudo ufw allow out on ens37 to any port 80 proto tcp
+sudo ufw allow out on ens37 to any port 443 proto tcp
+#enable the rule
+sudo ufw enable
+#delete the allowing rule on NAT for apt/docker pull after install full of your materials
+sudo ufw status numbered
+sudo ufw delete {the numbered allowing rule on ens37}
+```
 
