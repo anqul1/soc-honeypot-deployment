@@ -53,7 +53,6 @@ Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up t
 - Add 2 NICs to your VM: 
   - VMnet3 (10.10.50.0/24)
   - VMnet4 (10.10.10.0/24)
-  
 <img width="372" height="325" alt="image" src="https://github.com/user-attachments/assets/1d8040a4-78e8-43d6-900f-b38fdaa5035d" />
 
 - Check if 2 NICs detected, run command: `ip a`
@@ -83,6 +82,21 @@ ip link set eth1 up
   - <img width="611" height="185" alt="image" src="https://github.com/user-attachments/assets/4f915dbb-beec-4d1b-922d-2f0138cbc5e7" />
   
   - As you can see, now i can ping between different interfaces (stimulate my VLAN)
+
+- Now i realize i forgot to add a NIC for install iptables ~~, let's do it:
+  - Add new NIC to the VM -> set it to NAT
+  - My VMnet8 (NAT) is at `192.168.244.0/24`, so i will set a static IP for this router (192.168.244.20/24)
+  - Run command below to assign the IP to this NIC:
+  ```bash
+  ip addr add 192.168.244.20/24 dev eth2
+  ip link set eth2 up 
+  ip route add default via 192.168.244.2 #my gateway
+  ```
+  > **⚠️ Notice:** On VMWare the default gateway of NAT is usually 192.168.x.2
+  - now let's test the connection by ping to my gateway and 8.8.8.8:
+  - <img width="534" height="346" alt="image" src="https://github.com/user-attachments/assets/6ca5be53-1ff6-47cc-9db1-3d8c61322133" />
+
+- Summary: <img width="550" height="140" alt="image" src="https://github.com/user-attachments/assets/96d6879c-e215-45c1-a4b8-45544d262285" />
 
 We're done the first job!
 
@@ -118,4 +132,14 @@ sudo ufw enable
 sudo ufw status numbered
 sudo ufw delete {the numbered allowing rule on ens37}
 ```
+### Router-Layer3
 
+#### Install iptables
+  - <img width="737" height="143" alt="image" src="https://github.com/user-attachments/assets/8aceab2d-f08c-400b-b547-fa594bff43de" />
+  - <img width="438" height="116" alt="image" src="https://github.com/user-attachments/assets/e767b33f-c883-414a-b367-3302433781d6" />
+  - And i failed, as you can see when i run `apk update`, it's go to `/media/cdrom/apks` (find in cd iso, not online repo).
+  - Here is how to fix this: `vi /etc/apk/repositories` > Add online repo of alpinelinux:
+  ```bash
+  http://dl-cdn.alpinelinux.org/alpine/v3.22/main
+  http://dl-cdn.alpinelinux.org/alpine/v3.22/community
+  ```
