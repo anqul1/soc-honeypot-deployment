@@ -96,13 +96,14 @@ ip link set eth1 up
   - now let's test the connection by ping to my gateway and 8.8.8.8:
   - <img width="534" height="346" alt="image" src="https://github.com/user-attachments/assets/6ca5be53-1ff6-47cc-9db1-3d8c61322133" />
 
-- Summary: <img width="550" height="140" alt="image" src="https://github.com/user-attachments/assets/96d6879c-e215-45c1-a4b8-45544d262285" />
+- Summary: <img width="476" height="151" alt="image" src="https://github.com/user-attachments/assets/8cce5cf5-18ef-4fe8-98d5-ff1b48764566" />
+
 
 We're done the first job!
 
 ## Step 2: Setup the firewall
 ### Honeypot VM (10.10.50.10)
-```bash
+```sh
 # Reset all rule -> default rule
 sudo ufw reset
 # It's a honeypot so we need to set the rule to deny-by-default
@@ -132,9 +133,8 @@ sudo ufw enable
 sudo ufw status numbered
 sudo ufw delete {the numbered allowing rule on ens37}
 ```
-### Router-Layer3
-
-#### Install iptables
+### Router-Layer3 (10.10.50.1/24) (10.10.10.1/24) (192.168.244.20/24)
+#### Install nftables
   - <img width="737" height="143" alt="image" src="https://github.com/user-attachments/assets/8aceab2d-f08c-400b-b547-fa594bff43de" />
   - <img width="438" height="116" alt="image" src="https://github.com/user-attachments/assets/e767b33f-c883-414a-b367-3302433781d6" />
   - And i failed, as you can see when i run `apk update`, it's go to `/media/cdrom/apks` (find in cd iso, not online repo).
@@ -143,3 +143,11 @@ sudo ufw delete {the numbered allowing rule on ens37}
   http://dl-cdn.alpinelinux.org/alpine/v3.22/main
   http://dl-cdn.alpinelinux.org/alpine/v3.22/community
   ```
+  - Then add Google DNS in `resolv.conf`:
+  ```sh
+  echo "nameserver 8.8.8.8" > /etc/resolv.conf
+  echo "nameserver 1.1.1.1" >> /etc/resolv.conf
+  ```
+  - Re-run `apk-upfate` now you're able to install nftables : <img width="602" height="310" alt="image" src="https://github.com/user-attachments/assets/2a24b11e-c951-49c7-a420-89e58c5a7903" />
+
+  
