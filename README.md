@@ -46,8 +46,10 @@ Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up t
 Run this command to forward traffic the traffic of our Honeypot(10.10.50.10) to ADMIN+SIEM(10.10.10.20) through Router: `sudo ip route add 10.10.10.0/24 via 10.10.50.1`
 
 I use it to test the connection, if you want a persistent route, you need to `sudo nano /etc/netplan/00-installer-config.yaml` and change the config like this:
-
+>I used the `gateway4` param first but it warned me: `gateway4 has been deprecated` so i user the routes instead.
 <img width="821" height="360" alt="image" src="https://github.com/user-attachments/assets/f7320f09-055f-46f2-8041-2a5036486c76" />
+
+
 
 
 ### ADMIN + SIEM (10.10.10.20/24)
