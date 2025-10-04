@@ -10,7 +10,7 @@ The goal of this lab is to configure and deploy a Honeypot (Decoy) and to captur
 ```java
 [Manage VLAN: 10.10.10.0/24]
 - Admin + SIEM (10.10.10.20/24)
-- My Real PC ;)
+- My Laptop ;)
 [Honeypot VLAN: 10.10.50.0/24]
 - Honeypot VM (10.10.50.10/24): Cowrie (SSH/Telnet); Dionaea (malware services); Glastopf (Web)
 - Ubuntu 22.04 live-server on VMWare
@@ -20,7 +20,7 @@ The goal of this lab is to configure and deploy a Honeypot (Decoy) and to captur
 - Using Alpine Linux (light distro) because I'm using my 4 years old laptop =))
 ```
 ## Step 1: Configure the network
-### Honeypot VM (10.10.50.10)
+### Honeypot VM (10.10.50.10/24)
 First, you need to install Ubuntu 22.04 live-server, and add 2 NIC into this VM: 
 - NIC 1: 10.10.50.10/24 (This one is for stimulate your Honeypot in a VLAN) (in my lab it's vmnet3)
 - NIC 2: NAT (And this one help you to connect with the internet to install things for your machine) 
@@ -41,7 +41,11 @@ For me, my NIC1 is corresponding to ens33, NIC2 is corresponding to ens37, chang
 
 Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up the NIC1 when I install the OS and add the NIC2 after that), and next you need to run `sudo netplan apply` 
 
-### Router-layer3 
+### ADMIN + SIEM (10.10.10.20/24)
+- It's my laptop so the configuration will be more easily, first you need to change the adapter settings:
+  - 
+
+### Router-layer3 (10.10.50.1/24) (10.10.10.1/24) (192.168.244.20/24)
 #### Install OS
 - Now we need to install a very light distro of linux - Alpine. Link to the distro: `https://www.alpinelinux.org/downloads/` then download the standard version (the x86_64 for my vmware)
 - Go to create a new virtual machine -> Choose your ISO File -> VMWare cannot detect the OS so you need to choose `Other Linux 5.x kernel 64-bit`
@@ -148,6 +152,6 @@ sudo ufw delete {the numbered allowing rule on ens37}
   echo "nameserver 8.8.8.8" > /etc/resolv.conf
   echo "nameserver 1.1.1.1" >> /etc/resolv.conf
   ```
-  - Re-run `apk-upfate` now you're able to install nftables : <img width="602" height="310" alt="image" src="https://github.com/user-attachments/assets/2a24b11e-c951-49c7-a420-89e58c5a7903" />
+  - Re-run `apk update` now you're able to install nftables : <img width="602" height="310" alt="image" src="https://github.com/user-attachments/assets/2a24b11e-c951-49c7-a420-89e58c5a7903" />
 
   
