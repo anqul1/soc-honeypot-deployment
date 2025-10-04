@@ -41,11 +41,22 @@ For me, my NIC1 is corresponding to ens33, NIC2 is corresponding to ens37, chang
 
 Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up the NIC1 when I install the OS and add the NIC2 after that), and next you need to run `sudo netplan apply` 
 
+
 ### ADMIN + SIEM (10.10.10.20/24)
 
 Cấu hình route lại alpine: `route -p add 10.10.50.0 mask 255.255.255.0 10.10.10.1`
 It's my laptop so the configuration will be more easily, first you need to change the adapter settings:
- 
+```bash
+#add rule
+netsh advfirewall firewall add rule name="Allow ICMP from Honeypot" `
+  dir=in action=allow protocol=icmpv4 remoteip=10.10.50.10
+netsh advfirewall firewall add rule name="Allow Syslog from Honeypot" `
+  dir=in action=allow protocol=udp localport=514 remoteip=10.10.50.10
+#check rule
+ Get-NetFirewallRule -DisplayName "*from Honeypot*"| Format-List *
+```
+
+
 
 ### Router-layer3 (10.10.50.1/24) (10.10.10.1/24) (192.168.244.20/24)
 #### Install OS
