@@ -42,8 +42,9 @@ For me, my NIC1 is corresponding to ens33, NIC2 is corresponding to ens37, chang
 Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up the NIC1 when I install the OS and add the NIC2 after that), and next you need to run `sudo netplan apply` 
 
 ### ADMIN + SIEM (10.10.10.20/24)
-- It's my laptop so the configuration will be more easily, first you need to change the adapter settings:
-  - 
+
+It's my laptop so the configuration will be more easily, first you need to change the adapter settings:
+ 
 
 ### Router-layer3 (10.10.50.1/24) (10.10.10.1/24) (192.168.244.20/24)
 #### Install OS
