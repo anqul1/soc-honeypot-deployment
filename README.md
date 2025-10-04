@@ -43,6 +43,7 @@ Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up t
 
 ### ADMIN + SIEM (10.10.10.20/24)
 
+Cấu hình route lại alpine: `route -p add 10.10.50.0 mask 255.255.255.0 10.10.10.1`
 It's my laptop so the configuration will be more easily, first you need to change the adapter settings:
  
 
