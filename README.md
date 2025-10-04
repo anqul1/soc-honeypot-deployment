@@ -41,11 +41,26 @@ For me, my NIC1 is corresponding to ens33, NIC2 is corresponding to ens37, chang
 
 Then, we need to renew IP for ens37 `sudo dhclient -v ens37` (I already set up the NIC1 when I install the OS and add the NIC2 after that), and next you need to run `sudo netplan apply` 
 
+> **⚠️ Notice: Configure to route back to Alpine router (10.10.50.1)**:
+
+Run this command to forward traffic the traffic of our Honeypot(10.10.50.10) to ADMIN+SIEM(10.10.10.20) through Router: `sudo ip route add 10.10.10.0/24 via 10.10.50.1`
+
+I use it to test the connection, if you want a persistent route, you need to `sudo nano /etc/netplan/00-installer-config.yaml` and change the config like this:
+
+<img width="821" height="360" alt="image" src="https://github.com/user-attachments/assets/f7320f09-055f-46f2-8041-2a5036486c76" />
+
 
 ### ADMIN + SIEM (10.10.10.20/24)
 
 Cấu hình route lại alpine: `route -p add 10.10.50.0 mask 255.255.255.0 10.10.10.1`
+
 It's my laptop so the configuration will be more easily, first you need to change the adapter settings:
+- Turn off IPv4 on vmnet3 (so the traffic will not go straight from our PC to the Honeypot)
+- <img width="448" height="585" alt="image" src="https://github.com/user-attachments/assets/2703f8de-bae8-457a-bc1b-1b7a8354d994" />
+- Change your IPv4 on vmnet4 (the default IP is 10.10.10.1) to 10.10.10.20
+-  <img width="935" height="558" alt="image" src="https://github.com/user-attachments/assets/f5195f95-5aa5-4991-aa8f-00fec95522a8" />
+
+
 ```bash
 #add rule
 netsh advfirewall firewall add rule name="Allow ICMP from Honeypot" `
@@ -59,6 +74,7 @@ netsh advfirewall firewall add rule name="Allow Syslog from Honeypot" `
 
 
 ### Router-layer3 (10.10.50.1/24) (10.10.10.1/24) (192.168.244.20/24)
+ > **⚠️ Notice:** Remember to take snapshot of the this router because it will not auto save current state into ROM
 #### Install OS
 - Now we need to install a very light distro of linux - Alpine. Link to the distro: `https://www.alpinelinux.org/downloads/` then download the standard version (the x86_64 for my vmware)
 - Go to create a new virtual machine -> Choose your ISO File -> VMWare cannot detect the OS so you need to choose `Other Linux 5.x kernel 64-bit`
@@ -95,9 +111,10 @@ ip link set eth1 up
   - <img width="463" height="163" alt="image" src="https://github.com/user-attachments/assets/b98c419f-9911-4946-9ad6-56ec6164d2fd" />
 
 - Let's test it from your Honeypot VM, let's ping to Admin at `10.10.10.20` (My real PC):
-  - `ping 10.10.10.20`
+  - `ping -c 3 10.10.10.20`
   - <img width="611" height="185" alt="image" src="https://github.com/user-attachments/assets/4f915dbb-beec-4d1b-922d-2f0138cbc5e7" />
-  
+  - <img width="765" height="217" alt="image" src="https://github.com/user-attachments/assets/9df88f98-7a32-43b6-970a-698217f62fa6" />
+  - The traceroute command stop at the ip of the router(10.10.50.1) because my firewall rule on ADMIN-PC only allow icmp and UDP/TCP on specified ports from 10.10.50.10 (Details in Step 2: Firewall configuration) 
   - As you can see, now i can ping between different interfaces (stimulate my VLAN)
 
 - Now i realize i forgot to add a NIC for install iptables ~~, let's do it:
