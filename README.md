@@ -186,7 +186,7 @@ sudo ufw status numbered
 sudo ufw delete {the numbered allowing rule on ens37}
 ```
 ### Router-Layer3 (10.10.50.1/24) (10.10.10.1/24) (192.168.244.20/24)
-#### Install nftables
+#### Install iptables
   - <img width="737" height="143" alt="image" src="https://github.com/user-attachments/assets/8aceab2d-f08c-400b-b547-fa594bff43de" />
   - <img width="438" height="116" alt="image" src="https://github.com/user-attachments/assets/e767b33f-c883-414a-b367-3302433781d6" />
   - And i failed, as you can see when i run `apk update`, it's go to `/media/cdrom/apks` (find in cd iso, not online repo).
@@ -200,6 +200,89 @@ sudo ufw delete {the numbered allowing rule on ens37}
   echo "nameserver 8.8.8.8" > /etc/resolv.conf
   echo "nameserver 1.1.1.1" >> /etc/resolv.conf
   ```
-  - Re-run `apk update` now you're able to install iptables : <img width="555" height="194" alt="image" src="https://github.com/user-attachments/assets/8c3f5367-81d2-41dd-9f95-5f4186adef24" />
+  - Re-run `apk update` now you're able to install iptables (i think i should use something that i used to, instead of nftables :)))) : <img width="555" height="194" alt="image" src="https://github.com/user-attachments/assets/8c3f5367-81d2-41dd-9f95-5f4186adef24" />
+#### firewall.sh
+```bash
+#delete all default rules
+iptables -F
+iptables -t nat -F
+iptables -X
 
-  
+#set the firewall policy to deny-by-default
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT ACCEPT
+
+#Allow loopback and session has been established
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A FORWARD -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+#Allow SSH from Admin VLAN 10.10.10.0/24
+iptables -A INPUT -i eth1 -p tcp --dport 22 -s 10.10.10.0/24 -j ACCEPT
+
+#Allow ICMP (Ping) from 2 VLANs
+iptables -A INPUT -p icmp -s 10.10.10.0/24 -j ACCEPT
+iptables -A INPUT -p icmp -s 10.10.50.0/24 -j ACCEPT
+
+# Enable NAT (for outbound Internet access)
+iptables -t nat -A POSTROUTING -o eth2 -j MASQUERADE
+
+# Allow forwarding from internal VLANs (eth0, eth1) to NAT (eth2)
+iptables -A FORWARD -i eth0 -o eth2 -s 10.10.50.0/24 -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth2 -s 10.10.10.0/24 -j ACCEPT
+iptables -A FORWARD -i eth2 -o eth0 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A FORWARD -i eth2 -o eth1 -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+#After this, you can remote NAT on each machine because now we can forward traffic to router -> NAT -> Internet.
+
+#Allow forwarding between two VLANs
+iptables -A FORWARD -i eth0 -o eth1 -s 10.10.50.0/24 -d 10.10.10.0/24 -j ACCEPT
+iptables -A FORWARD -i eth1 -o eth0 -s 10.10.10.0/24 -d 10.10.50.0/24 -j ACCEPT
+
+# Allow Honeypot <-> SIEM (log traffic)
+iptables -A FORWARD -i eth0 -o eth1 -s 10.10.50.10 -d 10.10.10.20 -p udp --dport 514 -j ACCEPT   # Syslog
+iptables -A FORWARD -i eth0 -o eth1 -s 10.10.50.10 -d 10.10.10.20 -p tcp --dport 5044 -j ACCEPT # Filebeat
+iptables -A FORWARD -i eth1 -o eth0 -s 10.10.10.20 -d 10.10.50.10 -j ACCEPT                   # SIEM -> Honeypot
+
+# Log and drop everything else
+iptables -A INPUT -m limit --limit 3/min -j LOG --log-prefix "DROP-IN: "
+iptables -A FORWARD -m limit --limit 3/min -j LOG --log-prefix "DROP-FWD: "
+```
+Create file `firewall.sh` on Admin PC (10.10.10.20) and run: `scp "C:\Users\anqul1\Desktop\firewall.sh" root@10.10.50.1:/root/` to tranfer the file to our router.  
+<img width="904" height="441" alt="image" src="https://github.com/user-attachments/assets/c53a31d3-86f2-425a-b91b-3f4a9aecef8a" />
+Now let's run the script:
+```bash
+chmod +x /root/firewall.sh
+./firewall.sh
+```
+after i run scripts i got many errors, i ask GPT and it tells me that on Alpine distro it uses `iptables-nft`, so the classic command will not be compatible. Now let's re-install `iptables-legacy`:
+```
+#install iptables-legacy
+apk del iptables
+apk add iptables iptables-legacy
+modprobe ip_tables
+modprobe iptable_filter
+modprobe iptable_nat
+modprobe nf_conntrack
+modprobe nf_conntrack_ipv4
+#rerun script
+./firewall.sh
+```
+<img width="1278" height="409" alt="image" src="https://github.com/user-attachments/assets/3be8ada6-d6f3-4b8e-9978-639dfa743a51" />
+
+Now let's test ssh from admin to router:
+<img width="917" height="379" alt="image" src="https://github.com/user-attachments/assets/adaa4444-aeda-4c9c-94fa-1966b1476332" /> 
+Success!
+Ping from honeypot <-> Admin (10.10.10.20):
+<img width="861" height="259" alt="image" src="https://github.com/user-attachments/assets/e41f1665-ac0b-4a83-8913-8a226b63f750" />
+Ping from attacker <-> Admin (10.10.10.20):
+<img width="545" height="133" alt="image" src="https://github.com/user-attachments/assets/731774d9-a5b5-4099-a12c-d73efc11b8ef" />
+
+Test logging on the router: 
+<img width="1462" height="590" alt="image" src="https://github.com/user-attachments/assets/c2be6ebb-3f0f-424a-91ae-84d293708308" />
+
+ 
+
+
+
+
