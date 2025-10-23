@@ -134,6 +134,22 @@ ip link set eth1 up
 
 - Summary: <img width="476" height="151" alt="image" src="https://github.com/user-attachments/assets/8cce5cf5-18ef-4fe8-98d5-ff1b48764566" />
 
+### Attacker Kali (10.10.50.20/24)
+#### Set static IP Address for attacker machine 
+
+<img width="684" height="549" alt="image" src="https://github.com/user-attachments/assets/cce6163f-7a9c-4b90-89b1-b405db78b3dd" />
+
+We have the `eth1` here need to set to statics IP Address. Run the command `sudo vim /etc/network/interfaces` and add the config for eth1: 
+```
+iface eth1 inet static
+auto eth1
+address 10.10.50.20/24
+netmask 255.255.255.0
+gateway 10.10.50.1
+```
+After that, run `sudo ifup eth1` to manually restart the adapter
+<img width="651" height="515" alt="image" src="https://github.com/user-attachments/assets/db711ddc-e746-4e9a-ad93-627f089f98ff" />
+
 
 We're done the first job!
 
@@ -184,6 +200,6 @@ sudo ufw delete {the numbered allowing rule on ens37}
   echo "nameserver 8.8.8.8" > /etc/resolv.conf
   echo "nameserver 1.1.1.1" >> /etc/resolv.conf
   ```
-  - Re-run `apk update` now you're able to install nftables : <img width="602" height="310" alt="image" src="https://github.com/user-attachments/assets/2a24b11e-c951-49c7-a420-89e58c5a7903" />
+  - Re-run `apk update` now you're able to install iptables : <img width="555" height="194" alt="image" src="https://github.com/user-attachments/assets/8c3f5367-81d2-41dd-9f95-5f4186adef24" />
 
   
