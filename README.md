@@ -187,9 +187,9 @@ iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 # Allow incoming from Management (Admin/SIEM)
   # SSH từ Admin
     iptables -A INPUT -p tcp -s 10.10.10.20 --dport 22 -j ACCEPT
-  # Filebeat → Logstash (TCP/5044)
+  # Filebeat -> Logstash (TCP/5044)
     iptables -A OUTPUT -p tcp -d 10.10.10.20 --dport 5044 -j ACCEPT
-  # Syslog → UDP/514
+  # Syslog -> UDP/514
     iptables -A OUTPUT -p udp -d 10.10.10.20 --dport 514 -j ACCEPT
 # On the NIC2 (ens37 - the NAT NIC)
   #ping internet
@@ -208,6 +208,9 @@ iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
 ```
 This is rule tables after configuration: 
 <img width="1523" height="879" alt="image" src="https://github.com/user-attachments/assets/e5aa161a-6e41-4557-a360-1d00115e1b4b" />
+
+It's not done yet, the iptables rules is not persist so you'll need to install `iptables-persistent
+` packet to persist the rule you've been set. `sudo apt install iptables-persistent` and it will ask you to save current rules, click Yes.
 
 ### Router-Layer3 (10.10.50.1/24) (10.10.10.1/24) (192.168.244.20/24)
 #### Install iptables
@@ -304,6 +307,19 @@ Ping from attacker <-> Admin (10.10.10.20):
 
 Test logging on the router: 
 <img width="1462" height="590" alt="image" src="https://github.com/user-attachments/assets/c2be6ebb-3f0f-424a-91ae-84d293708308" />
+
+## Step 3: Deploy the Honeypots
+### Install docker
+Go to this site and they will so you how to setup docker on your ubuntu `https://docs.docker.com/engine/install/ubuntu/`. 
+### Deployment
+```
+# create folder for honeypot and create docker-compose.yml
+sudo mkdir -p /opt/honeypot/{cowrie,glastopf,dionaea}
+sudo chown -R $USER:$USER /opt/honeypot
+cd /opt/honeypot
+nano docker-compose.yml
+
+```
 
  
 
