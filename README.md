@@ -156,35 +156,59 @@ We're done the first job!
 ## Step 2: Setup the firewall
 ### Honeypot VM (10.10.50.10)
 ```sh
+#!/bin/bash
+
 # Reset all rule -> default rule
-sudo ufw reset
+iptables -F
+iptables -t nat -F
+iptables -X
 # It's a honeypot so we need to set the rule to deny-by-default
-sudo ufw default deny incoming
-sudo ufw default deny outgoing
+iptables -P INPUT DROP
+iptables -P FORWARD DROP
+iptables -P OUTPUT DROP
+
+#Allow loopback and session has been established
+iptables -A INPUT -i lo -j ACCEPT
+iptables -A OUTPUT -o lo -j ACCEPT
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+iptables -A OUTPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
 # Allow incoming from attacker in VLAN to honeypot ports + ICMP
-sudo ufw allow from 10.10.50.0/24 to any port 2222 proto tcp   # Cowrie (SSH fake)
-sudo ufw allow from 10.10.50.0/24 to any port 8080 proto tcp   # Glastopf (HTTP)
-sudo ufw allow from 10.10.50.0/24 to any port 1445 proto tcp   # Dionaea mapped SMB
-sudo ufw allow from 10.10.50.0/24 to any proto icmp # allow ICMP (ping) from VLAN of the Honeypot (where the attacker located)
+  # Cowrie (SSH giả)
+  iptables -A INPUT -p tcp -s 10.10.50.0/24 --dport 2222 -j ACCEPT
+  # Glastopf (HTTP)
+  iptables -A INPUT -p tcp -s 10.10.50.0/24 --dport 8080 -j ACCEPT
+  # Dionaea (SMB)
+  iptables -A INPUT -p tcp -s 10.10.50.0/24 --dport 445 -j ACCEPT
+  # allow ICMP (ping) from VLAN of the Honeypot (where the attacker located)
+  iptables -A INPUT -p icmp -s 10.10.50.0/24 -j ACCEPT 
+  # Allow ICMP (Ping) from the Honeypot to other in VLAN
+  sudo iptables -A OUTPUT -p icmp -d 10.10.50.0/24 -j ACCEPT
 # Allow incoming from Management (Admin/SIEM)
-sudo ufw allow from 10.10.10.20 to any port 22 proto tcp     # Admin SSH
-sudo ufw allow out to 10.10.10.20 port 5044 proto tcp   # Filebeat -> Logstash/Logstash-beats
-sudo ufw allow out to 10.10.10.20 port 514 proto udp    # Syslog
+  # SSH từ Admin
+    iptables -A INPUT -p tcp -s 10.10.10.20 --dport 22 -j ACCEPT
+  # Filebeat → Logstash (TCP/5044)
+    iptables -A OUTPUT -p tcp -d 10.10.10.20 --dport 5044 -j ACCEPT
+  # Syslog → UDP/514
+    iptables -A OUTPUT -p udp -d 10.10.10.20 --dport 514 -j ACCEPT
 # On the NIC2 (ens37 - the NAT NIC)
-# DNS (UDP/TCP) on NAT interface so name resolution works
-sudo ufw allow out on ens37 to any port 53 proto udp
-sudo ufw allow out on ens37 to any port 53 proto tcp
-# DHCP client 
-sudo ufw allow out on ens37 to any port 67 proto udp
+  #ping internet
+  iptables -A OUTPUT -p icmp --icmp-type echo-request -o ens37 -j ACCEPT
+  # DNS (UDP/TCP) on NAT interface so name resolution works
+  # DNS (UDP/TCP)
+  iptables -A OUTPUT -o ens37 -p udp --dport 53 -j ACCEPT
+  iptables -A OUTPUT -o ens37 -p tcp --dport 53 -j ACCEPT
+  # DHCP client (UDP/67)
+  iptables -A OUTPUT -o ens37 -p udp --dport 67 -j ACCEPT
 # TEMPORARY: allow HTTP/HTTPS on NAT for apt/docker pull 
-sudo ufw allow out on ens37 to any port 80 proto tcp
-sudo ufw allow out on ens37 to any port 443 proto tcp
-#enable the rule
-sudo ufw enable
-#delete the allowing rule on NAT for apt/docker pull after install full of your materials
-sudo ufw status numbered
-sudo ufw delete {the numbered allowing rule on ens37}
+  iptables -A OUTPUT -o ens37 -p tcp --dport 80 -j ACCEPT
+  iptables -A OUTPUT -o ens37 -p tcp --dport 443 -j ACCEPT
+#Show rules
+  iptables -L -v -n
 ```
+This is rule tables after configuration: 
+<img width="1523" height="879" alt="image" src="https://github.com/user-attachments/assets/e5aa161a-6e41-4557-a360-1d00115e1b4b" />
+
 ### Router-Layer3 (10.10.50.1/24) (10.10.10.1/24) (192.168.244.20/24)
 #### Install iptables
   - <img width="737" height="143" alt="image" src="https://github.com/user-attachments/assets/8aceab2d-f08c-400b-b547-fa594bff43de" />
