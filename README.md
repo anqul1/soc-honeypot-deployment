@@ -312,16 +312,85 @@ Test logging on the router:
 ### Install docker
 Go to this site and they will so you how to setup docker on your ubuntu `https://docs.docker.com/engine/install/ubuntu/`. 
 ### Deployment
-```
+```bash
 # create folder for honeypot and create docker-compose.yml
 sudo mkdir -p /opt/honeypot/{cowrie,glastopf,dionaea}
 sudo chown -R $USER:$USER /opt/honeypot
 cd /opt/honeypot
 nano docker-compose.yml
-
 ```
+Next, let's write a simple `docker-compose` file:
+```yaml
+version: "3.8"
 
- 
+services:
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: cowrie
+    restart: unless-stopped
+    ports:
+      - "10.10.50.10:2222:2222"
+    volumes:
+      - ./cowrie/data:/cowrie/data
+      - ./cowrie/log:/cowrie/log
+    networks:
+      - honeynet
+
+  glastopf:
+    image: decepot/glastopf:latest
+    container_name: glastopf
+    restart: unless-stopped
+    ports:
+      - "10.10.50.10:8080:8080"
+    volumes:
+      - ./glastopf/data:/opt/glastopf/db
+      - ./glastopf/log:/opt/glastopf/log
+    networks:
+      - honeynet
+
+  dionaea:
+    image: dinotools/dionaea:latest
+    container_name: dionaea
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "10.10.50.10:445:445"
+      - "10.10.50.10:445:445/udp"
+    volumes:
+      - ./dionaea/data:/opt/dionaea/var/dionaea
+      - ./dionaea/log:/opt/dionaea/var/log/dionaea
+    networks:
+      - honeynet
+
+networks:
+  honeynet:
+    driver: bridge
+```
+After that, we got this:
+<img width="1218" height="560" alt="image" src="https://github.com/user-attachments/assets/68108e4e-8655-4763-aa6d-d97c4cb8e38a" />
+
+### Testing
+Let's test it from our attacker machine: 
+- First let's test the SSH connection using `ssh root@10.10.50.10 -p 2222`, as you can see here: 
+<img width="663" height="182" alt="image" src="https://github.com/user-attachments/assets/cbf96cc5-a026-45af-8b1d-218d6c978985" />
+
+- Next, we can test the SMB connection using `nmap -p445 --script smb-enum-shares 10.10.50.10`, you can see the result looks so real:
+<img width="1326" height="781" alt="image" src="https://github.com/user-attachments/assets/90bbc960-435f-4f16-8be7-d599cb3bc9bb" />
+
+- And the last, we can test with the glastopf honeypot using `curl -v http://10.10.50.10:8080/`, the result as you can see: connection refused and status is closed.
+<img width="1022" height="368" alt="image" src="https://github.com/user-attachments/assets/b70a7874-e7bb-4572-b734-351dc0131079" />
+
+From the honeypot, let's see the log of the honeypot (dionaea): 
+<img width="1889" height="908" alt="image" src="https://github.com/user-attachments/assets/86905ba1-56a8-4230-8ff3-f65a8f7b14b8" />
+
+As you can see, there are many connection from attacker to this Honeypot. Caught OFF!
+
+
+
+
+
+
 
 
 
