@@ -1,0 +1,45 @@
+version: "3.8"
+
+services:
+  cowrie:
+    image: cowrie/cowrie:latest
+    container_name: cowrie
+    restart: unless-stopped
+    ports:
+      - "10.10.50.10:2222:2222"
+    volumes:
+      - ./cowrie/data:/cowrie/data
+      - ./cowrie/log:/cowrie/log
+    networks:
+      - honeynet
+
+  glastopf:
+    image: decepot/glastopf:latest
+    container_name: glastopf
+    restart: unless-stopped
+    ports:
+      - "10.10.50.10:8080:8080"
+    volumes:
+      - ./glastopf/data:/opt/glastopf/db
+      - ./glastopf/log:/opt/glastopf/log
+    networks:
+      - honeynet
+
+  dionaea:
+    image: dinotools/dionaea:latest
+    container_name: dionaea
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - "10.10.50.10:445:445"
+      - "10.10.50.10:445:445/udp"
+    volumes:
+      - ./dionaea/data:/opt/dionaea/var/dionaea
+      - ./dionaea/log:/opt/dionaea/var/log/dionaea
+    networks:
+      - honeynet
+
+networks:
+  honeynet:
+    driver: bridge
